@@ -44,10 +44,9 @@ function App() {
       ) : (
         <div>
           <Login setUser={setUser} />
-
-          <ToastContainer />
         </div>
       )}
+      <ToastContainer />
     </div>
   );
 }
