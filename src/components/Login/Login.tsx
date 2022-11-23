@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, Input } from "@mui/material";
+import { Box, Button, CircularProgress } from "@mui/material";
 import { app, auth } from "../../firebase";
 import firebase from "firebase/app";
 import * as firebaseui from "firebaseui";
@@ -12,6 +12,8 @@ import {
 import "firebase/compat/auth";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { useForm, Controller } from "react-hook-form";
+import { Input } from "../ui/Input";
 
 declare global {
   interface Window {
@@ -26,16 +28,41 @@ enum STEPS {
   OTP,
 }
 
+interface PhoneForm {
+  phone: string;
+}
+
+interface OtpForm {
+  otp: string;
+}
+
 export const Login = ({ setUser }: { setUser: (user: any) => void }) => {
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
   const [step, setStep] = useState(STEPS.PHONE);
   const [verifying, setVerifying] = useState(false);
 
   const confirmationResult = useRef<any>(null);
 
-  const initiateLogin = async (e: FormEvent) => {
-    e.preventDefault();
+  const {
+    control: phoneControl,
+    handleSubmit: phoneSubmit,
+    formState: { errors: phoneErrors },
+  } = useForm<PhoneForm>({
+    defaultValues: {
+      phone: "",
+    },
+  });
+
+  const {
+    control: otpControl,
+    handleSubmit: otpSubmit,
+    formState: { errors: otpErrors },
+  } = useForm<OtpForm>({
+    defaultValues: {
+      otp: "",
+    },
+  });
+
+  const onPhoneSubmit = async ({ phone }: PhoneForm) => {
     window.recaptchaVerifier = new RecaptchaVerifier(
       "sign-in-button",
       {
@@ -61,8 +88,7 @@ export const Login = ({ setUser }: { setUser: (user: any) => void }) => {
     window.captchaId = await window.recaptchaVerifier.verify();
   };
 
-  const submitOtp = async (e: FormEvent) => {
-    e.preventDefault();
+  const onOtpSubmit = async ({ otp }: OtpForm) => {
     try {
       const codeResult = await confirmationResult.current.confirm(otp);
       const user = codeResult.user;
@@ -76,8 +102,12 @@ export const Login = ({ setUser }: { setUser: (user: any) => void }) => {
   return (
     <Box>
       {step === STEPS.PHONE ? (
-        <form onSubmit={initiateLogin}>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <form onSubmit={phoneSubmit(onPhoneSubmit)} key="phone-form">
+          <Input
+            control={phoneControl}
+            name="phone"
+            rules={{ required: { value: true, message: "Phone is required" } }}
+          />
           <Box marginTop={2}>
             {verifying ? (
               <CircularProgress />
@@ -87,10 +117,19 @@ export const Login = ({ setUser }: { setUser: (user: any) => void }) => {
               </button>
             )}
           </Box>
+          {phoneErrors.phone?.message && (
+            <Box color="red" fontSize="12px">
+              {phoneErrors.phone?.message}
+            </Box>
+          )}
         </form>
       ) : (
-        <form onSubmit={submitOtp}>
-          <Input value={otp} onChange={(e) => setOtp(e.target.value)} />
+        <form onSubmit={otpSubmit(onOtpSubmit)} key="otp-form">
+          <Input
+            control={otpControl}
+            name="otp"
+            rules={{ required: { value: true, message: "Code is required" } }}
+          />
           <Box marginTop={2}>
             <button type="submit">Submit code</button>
           </Box>
